@@ -1,0 +1,22 @@
+[package]
+name = "cece"
+version = "0.1.0"
+edition = "2024"
+description = "A Burmilla cat that chases your cursor across Hyprland (Omarchy)"
+license = "BSD-2-Clause"
+rust-version = "1.85"
+
+[dependencies]
+calloop = { version = "0.14", features = ["signals"] }
+png = "0.18"
+rodio = { version = "0.22", default-features = false, features = ["playback", "wav"], optional = true }
+smithay-client-toolkit = { version = "0.21", default-features = false, features = ["calloop"] }
+
+[features]
+default = ["sound"]
+sound = ["dep:rodio"]
+
+[profile.release]
+lto = true
+strip = true
+codegen-units = 1

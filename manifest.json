@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "id": "ure.cece",
+  "name": "Cece",
+  "version": "0.1.0",
+  "author": "ure",
+  "license": "BSD-2-Clause",
+  "description": "Cece, a Burmilla cat that chases your cursor across the desktop: a Rust port of the classic neko. From the bar icon you can mute it, make it stay, or let it out.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Cece",
+    "description": "Click to mute or unmute the cat, right click to make it stay put or follow, middle click to let it out or send it away.",
+    "category": "Fun",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "enabled": true,
+      "speed": 2,
+      "scale": 2,
+      "skin": "burmilla",
+      "quiet": false,
+      "command": "cece"
+    },
+    "schema": [
+      {
+        "key": "speed",
+        "type": "number",
+        "label": "Speed",
+        "min": 0.5,
+        "max": 8,
+        "step": 0.5,
+        "defaultValue": 2,
+        "description": "How fast the cat runs. 2 is the classic pace."
+      },
+      {
+        "key": "scale",
+        "type": "number",
+        "label": "Size",
+        "min": 1,
+        "max": 4,
+        "step": 0.5,
+        "defaultValue": 2,
+        "description": "1 is the original 32px cat."
+      },
+      {
+        "key": "skin",
+        "type": "string",
+        "label": "Skin",
+        "defaultValue": "burmilla",
+        "description": "burmilla, classic, or a path to a sprite sheet PNG."
+      },
+      {
+        "key": "quiet",
+        "type": "boolean",
+        "label": "Quiet",
+        "defaultValue": false,
+        "description": "No yawns, snores or startled meows."
+      },
+      {
+        "key": "command",
+        "type": "string",
+        "label": "Command",
+        "defaultValue": "cece",
+        "description": "The cece binary; ~/.local/bin/cece after install.sh."
+      }
+    ]
+  }
+}
