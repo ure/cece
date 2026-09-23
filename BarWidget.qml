@@ -7,7 +7,7 @@ import qs.Ui
 // Bar toggle for cece, the Burmilla cat that chases the cursor. The cat is a
 // separate process (the Rust `cece` binary drawing on a click-through overlay
 // layer). Left click mutes or unmutes the cat, right click makes it stay put
-// or follow, middle click lets it out or sends it away. Both the sound and
+// or follow, middle click sends it away or lets it back out with a toy mouse. Both the sound and
 // whether the cat is out are remembered across shell restarts.
 BarWidget {
   id: root
@@ -23,18 +23,20 @@ BarWidget {
   readonly property real scale: Number(setting("scale", 2)) || 2
   readonly property string skin: String(setting("skin", "burmilla"))
   readonly property bool quiet: setting("quiet", false) === true
+  readonly property string toy: String(setting("toy", 60))
 
-  function argv() {
+  function argv(play) {
     var args = [root.command, "--speed", String(root.speed), "--scale", String(root.scale),
-                "--skin", root.skin]
+                "--skin", root.skin, "--toy", root.toy]
     if (root.quiet) args.push("--quiet")
+    if (play) args.push("--play")
     return args
   }
 
   // Detached, so the cat outlives a shell reload; cece itself refuses to run
   // twice, so every bar (one per monitor) may safely ask for it.
-  function start() {
-    Quickshell.execDetached(["bash", "-lc", 'exec "$@"', "bash"].concat(root.argv()))
+  function start(play) {
+    Quickshell.execDetached(["bash", "-lc", 'exec "$@"', "bash"].concat(root.argv(play === true)))
     root.staying = false
     poll.restart()
   }
@@ -59,7 +61,8 @@ BarWidget {
       root.stop()
       root.persist({ enabled: false })
     } else {
-      root.start()
+      // Let out by hand: she comes out to play, with a toy on its way in.
+      root.start(true)
       root.persist({ enabled: true })
     }
   }
@@ -121,7 +124,7 @@ BarWidget {
       + (root.quiet ? " (muted)" : "")
       + "\nClick: " + (root.quiet ? "sound on" : "mute")
       + " · Right-click: " + (root.staying ? "follow" : "stay")
-      + " · Middle-click: " + (root.running ? "send away" : "let out")
+      + " · Middle-click: " + (root.running ? "send away" : "let out to play")
     onPressed: function(b) {
       if (b === Qt.RightButton) root.toggleStay()
       else if (b === Qt.MiddleButton) root.toggle()

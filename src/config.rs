@@ -8,11 +8,15 @@ pub struct Config {
     pub scale: f64,
     pub quiet: bool,
     pub skin: String,
+    /// Seconds asleep before a toy mouse is thrown in; 0 for never.
+    pub toy: f64,
+    /// Come out with a toy already on its way in.
+    pub play: bool,
 }
 
 impl Default for Config {
     fn default() -> Self {
-        Config { speed: 2.0, scale: 2.0, quiet: false, skin: "burmilla".into() }
+        Config { speed: 2.0, scale: 2.0, quiet: false, skin: "burmilla".into(), toy: 60.0, play: false }
     }
 }
 
@@ -25,6 +29,9 @@ Options:
   --speed <n>     running speed (default 2.0)
   --scale <n>     size; 1.0 is the classic 32px cat (default 2.0)
   --skin <name>   burmilla, classic, or a path to a sprite sheet PNG
+  --toy <secs>    throw in a toy mouse after this long asleep, or off
+                  (default 60)
+  --play          come out playing: throw in a toy mouse straight away
   --quiet         no sounds
   -h, --help      show this help
   -V, --version   show the version
@@ -34,6 +41,7 @@ Config file: $XDG_CONFIG_HOME/cece/config (~/.config/cece/config), e.g.
   scale = 2
   quiet = true
   skin = classic
+  toy = 120
 
 Signals: SIGUSR1 tells the cat to stay put (or to follow again),
 SIGUSR2 mutes (or unmutes) it.";
@@ -70,6 +78,12 @@ impl Config {
                 }
             }
             "skin" => self.skin = value.to_string(),
+            "toy" => {
+                self.toy = match value {
+                    "off" | "no" | "false" | "never" | "0" => 0.0,
+                    v => number(v)?,
+                }
+            }
             _ => return Err(format!("unknown setting {key:?}")),
         }
         Ok(())
@@ -102,7 +116,8 @@ impl Config {
                 "-h" | "--help" => return Ok(Action::Help),
                 "-V" | "--version" => return Ok(Action::Version),
                 "--quiet" => self.quiet = true,
-                "--speed" | "--scale" | "--skin" => {
+                "--play" => self.play = true,
+                "--speed" | "--scale" | "--skin" | "--toy" => {
                     let value = inline
                         .or_else(|| args.next())
                         .ok_or_else(|| format!("{flag} needs a value"))?;
@@ -137,10 +152,11 @@ mod tests {
     fn file_then_flags() {
         let mut cfg = Config::default();
         cfg.apply_file("# comment\nspeed = 3\nskin = \"classic\"\nquiet = yes\n").unwrap();
-        let Action::Run(cfg) = cfg.apply_args(args(&["--speed=4", "--scale", "3"])).unwrap() else {
+        let Action::Run(cfg) = cfg.apply_args(args(&["--speed=4", "--scale", "3", "--toy", "off", "--play"])).unwrap()
+        else {
             panic!("expected run");
         };
-        assert_eq!(cfg, Config { speed: 4.0, scale: 3.0, quiet: true, skin: "classic".into() });
+        assert_eq!(cfg, Config { speed: 4.0, scale: 3.0, quiet: true, skin: "classic".into(), toy: 0.0, play: true });
     }
 
     #[test]

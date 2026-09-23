@@ -2,10 +2,12 @@
   "schemaVersion": 1,
   "id": "ure.cece",
   "name": "Cece",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": "ure",
   "license": "BSD-2-Clause",
-  "description": "Cece, a Burmilla cat that chases your cursor across the desktop: a Rust port of the classic neko. From the bar icon you can mute it, make it stay, or let it out.",
+  "description": "A pixel-art Burmilla cat who lives on your desktop: she chases your cursor across every monitor, naps in one of four beds, plays with fifteen toys after a nap, swats a feather wand when you flick the mouse and hops to your smallest other screen while you type. A Rust port of the classic neko.",
+  "repository": "https://github.com/ure/cece",
+  "homepage": "https://github.com/ure/cece",
   "kinds": [
     "bar-widget"
   ],
@@ -14,7 +16,7 @@
   },
   "barWidget": {
     "displayName": "Cece",
-    "description": "Click to mute or unmute the cat, right click to make it stay put or follow, middle click to let it out or send it away.",
+    "description": "Click to mute or unmute the cat, right click to make it stay put or follow, middle click to send it away or let it back out to play.",
     "category": "Fun",
     "allowMultiple": false,
     "defaultSection": "right",
@@ -24,7 +26,8 @@
       "scale": 2,
       "skin": "burmilla",
       "quiet": false,
-      "command": "cece"
+      "command": "cece",
+      "toy": 60
     },
     "schema": [
       {
@@ -60,6 +63,16 @@
         "label": "Quiet",
         "defaultValue": false,
         "description": "No yawns, snores or startled meows."
+      },
+      {
+        "key": "toy",
+        "type": "number",
+        "label": "Nap before play",
+        "min": 0,
+        "max": 3600,
+        "step": 10,
+        "defaultValue": 60,
+        "description": "Seconds asleep before a round of play with toys starts; 0 turns toys off."
       },
       {
         "key": "command",

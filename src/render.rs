@@ -1,6 +1,6 @@
 //! Software rendering into a premultiplied ARGB8888 buffer.
 
-use crate::{cat::Pose, sprites::FRAME};
+use crate::{bed, cat::Pose, sprites::FRAME};
 
 /// Everything is in buffer pixels: the surface is `size` logical pixels
 /// square and the buffer is `size * scale` pixels.
@@ -75,6 +75,16 @@ impl Canvas<'_> {
         }
     }
 
+    /// Fill an `n`-pixel square cell with `rgb` at `alpha`.
+    pub fn cell(&mut self, x: i64, y: i64, n: i64, rgb: u32, alpha: f64) {
+        let color = tint(rgb, alpha);
+        for dy in 0..n {
+            for dx in 0..n {
+                self.blend(x + dx, y + dy, color);
+            }
+        }
+    }
+
     /// A pixel-font "z", each glyph pixel `px` buffer pixels, faded by
     /// `alpha`: a light glyph over a dark offset copy, legible on any theme.
     pub fn z(&mut self, x: f64, y: f64, px: f64, alpha: f64) {
@@ -84,9 +94,7 @@ impl Canvas<'_> {
     }
 
     fn glyph(&mut self, x: f64, y: f64, px: f64, alpha: f64, rgb: u32) {
-        let a = (alpha.clamp(0.0, 1.0) * 255.0) as u32;
-        let premul = |c: u32| ((c & 0xff) * a / 255) & 0xff;
-        let color = a << 24 | premul(rgb >> 16) << 16 | premul(rgb >> 8) << 8 | premul(rgb);
+        let color = tint(rgb, alpha);
         let p = px.max(1.0).round() as i64;
         for (row, bits) in Z_GLYPH.iter().enumerate() {
             for col in 0..5 {
@@ -103,6 +111,13 @@ impl Canvas<'_> {
     }
 }
 
+/// An opaque `rgb` colour at `alpha`, premultiplied.
+fn tint(rgb: u32, alpha: f64) -> u32 {
+    let a = (alpha.clamp(0.0, 1.0) * 255.0) as u32;
+    let premul = |c: u32| ((c & 0xff) * a / 255) & 0xff;
+    a << 24 | premul(rgb >> 16) << 16 | premul(rgb >> 8) << 8 | premul(rgb)
+}
+
 /// Draw the cat, its shadow and any sleep bubbles.
 ///
 /// `origin` is where the cat's top-left corner lands in the buffer and `cat`
@@ -114,9 +129,22 @@ pub fn draw(canvas: &mut Canvas, frame: &[u32], pose: &Pose, origin: (f64, f64),
 
     let ground = oy + 29.5 * u;
     let wide = if pose.asleep.is_some() { 11.0 } else { 8.5 };
-    canvas.shadow(ox + cat / 2.0, ground, wide * u * pose.shadow.max(0.4), 2.2 * u, pose.shadow.max(0.3));
+    let in_bed = pose.bed.map_or(0.0, |(_, a)| a);
+    let strength = pose.shadow.max(0.3) * (1.0 - in_bed);
+    canvas.shadow(ox + cat / 2.0, ground, wide * u * pose.shadow.max(0.4), 2.2 * u, strength);
 
+    // A bed goes under the middle of the curled-up cat: behind her, then
+    // its front rim over her.
+    let under = (ox + 18.5 * u, ground);
+    if let Some((kind, alpha)) = pose.bed {
+        let (sx, sy, rx, ry) = bed::shadow(kind);
+        canvas.shadow(under.0 + sx * u, under.1 + sy * u, rx * u, ry * u, alpha);
+        bed::draw(canvas, kind, under, u, alpha, false);
+    }
     canvas.sprite(frame, ox + pose.dx * scale, oy + pose.dy * scale, cat);
+    if let Some((kind, alpha)) = pose.bed {
+        bed::draw(canvas, kind, under, u, alpha, true);
+    }
 
     if let Some(t) = pose.asleep {
         // Three staggered Zzz drifting up and to the right.

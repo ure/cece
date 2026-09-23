@@ -15,14 +15,14 @@ use std::{
 };
 
 #[derive(Clone)]
-pub struct Cursor(Arc<Mutex<Option<(f64, f64)>>>);
+pub struct Cursor(Arc<Mutex<Option<(f64, f64)>>>, PathBuf);
 
 impl Cursor {
     pub fn spawn() -> Result<Self, String> {
         let socket = socket_path()?;
         query(&socket).map_err(|e| format!("Hyprland IPC at {}: {e}", socket.display()))?;
 
-        let cursor = Cursor(Arc::new(Mutex::new(None)));
+        let cursor = Cursor(Arc::new(Mutex::new(None)), socket.clone());
         let shared = cursor.clone();
         thread::Builder::new()
             .name("cursor".into())
@@ -40,6 +40,23 @@ impl Cursor {
     pub fn get(&self) -> Option<(f64, f64)> {
         *self.0.lock().unwrap()
     }
+
+    /// Name of the monitor with keyboard focus (the active workspace's).
+    pub fn focused_monitor(&self) -> Option<String> {
+        let mut stream = UnixStream::connect(&self.1).ok()?;
+        stream.set_read_timeout(Some(Duration::from_millis(200))).ok()?;
+        stream.write_all(b"j/activeworkspace").ok()?;
+        let mut reply = String::new();
+        stream.read_to_string(&mut reply).ok()?;
+        monitor_of(&reply)
+    }
+}
+
+/// The `"monitor": "NAME"` field of a workspace in Hyprland's JSON.
+fn monitor_of(json: &str) -> Option<String> {
+    let rest = &json[json.find("\"monitor\"")? + 9..];
+    let rest = &rest[rest.find('"')? + 1..];
+    Some(rest[..rest.find('"')?].to_string())
 }
 
 fn socket_path() -> Result<PathBuf, String> {
@@ -75,5 +92,11 @@ mod tests {
         assert_eq!(super::parse("1254, 1079\n"), Some((1254.0, 1079.0)));
         assert_eq!(super::parse("-3, 7"), Some((-3.0, 7.0)));
         assert_eq!(super::parse("unknown request"), None);
+    }
+
+    #[test]
+    fn finds_the_focused_monitor() {
+        let json = r#"{"id": 3, "name": "3", "monitor": "DP-3", "monitorID": 2, "windows": 1}"#;
+        assert_eq!(super::monitor_of(json).as_deref(), Some("DP-3"));
     }
 }
